@@ -1,3 +1,5 @@
+Успеваемость https://docs.google.com/spreadsheets/d/1CK5MifrZwrS_Mp1iT5jxHrPrBcLWbOiMQyOtswtGaE4/edit?usp=sharing
+
 # 25947
 
 Подключение к Solaris
