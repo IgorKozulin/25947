@@ -6,19 +6,24 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+// Структура для одной строки файла
 struct Line {
-    off_t position;
-    size_t length;
+    off_t position; // Начало строки в файле
+    size_t length;  // Длина строки
 };
 
 int main(int argc, char *argv[])
 {
     const char *filename = "text.txt";
-    int fd;
-    struct stat file_info;
-    char *file_data;
+
+    int fd; // Результат open()
+    struct stat file_info;// информация о файле
+    char *file_data; // файл в памяти
     struct Line *table = NULL;
     size_t count = 0;
+
+    // В задании 5 были position и length при чтении через read()
+    // В задании 7 используем начало текущей строки в памяти
     size_t line_start = 0;
     int line_number;
 
@@ -28,13 +33,15 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Usage: %s [file]\n", argv[0]);
         return 1;
     }
-
     fd = open(filename, O_RDONLY);
+    
+    // Проверяем, открылся ли файл
     if (fd == -1) {
         perror("open");
         return 1;
     }
 
+    // вместо чтения файла через read() сначала узнаём его размер
     if (fstat(fd, &file_info) == -1) {
         perror("fstat");
         close(fd);
@@ -46,7 +53,9 @@ int main(int argc, char *argv[])
         close(fd);
         return 0;
     }
-
+    // В задании 5 файл читался функцией read()
+    // Теперь mmap() отображает весь файл в память
+    // После этого file_data[i] — i-й символ файла
     file_data = mmap(NULL, (size_t)file_info.st_size,
                      PROT_READ, MAP_PRIVATE, fd, 0);
 
@@ -55,7 +64,8 @@ int main(int argc, char *argv[])
         close(fd);
         return 1;
     }
-
+    // В задании 5 было: read(fd, &symbol, 1)
+    // Теперь проходим по символам файла через file_data[i]
     for (size_t i = 0; i < (size_t)file_info.st_size; i++) {
         if (file_data[i] == '\n') {
             struct Line *new_table;
@@ -65,19 +75,25 @@ int main(int argc, char *argv[])
             if (new_table == NULL) {
                 perror("realloc");
                 free(table);
+                // отменяем отображение файла в память
                 munmap(file_data, (size_t)file_info.st_size);
+
                 close(fd);
                 return 1;
             }
 
             table = new_table;
+
+            // Запоминаем начало и длину найденной строки
             table[count].position = (off_t)line_start;
             table[count].length = i - line_start;
             count++;
+
             line_start = i + 1;
         }
     }
 
+    // Добавляем последнюю строку, если файл не закончился символом '\n'
     if (line_start < (size_t)file_info.st_size) {
         struct Line *new_table;
 
@@ -87,6 +103,7 @@ int main(int argc, char *argv[])
             perror("realloc");
             free(table);
             munmap(file_data, (size_t)file_info.st_size);
+
             close(fd);
             return 1;
         }
@@ -122,14 +139,18 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        // В задании 5 здесь были lseek(), malloc(), read() и free()
+        // Теперь строка уже находится в памяти в file_data
         printf("Selected line: %.*s\n",
                (int)table[line_number].length,
                file_data + table[line_number].position);
     }
 
     free(table);
+    // В задании 5 этого не было, потому что не было mmap()
+    // munmap() убирает отображение файла из памяти
     munmap(file_data, (size_t)file_info.st_size);
-    close(fd);
 
+    close(fd);
     return 0;
 }
