@@ -1,3 +1,9 @@
 options
+ex_time
+setuid_test
+list_strings
+line_lookup
+line_lookup_alarm
+line_lookup_mmap
 *.o
 core
