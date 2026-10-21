@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -O2
-TARGET = ex_time
+TARGET = time
 SRC = time.c
 
 all: $(TARGET)
