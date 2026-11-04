@@ -1,3 +1,5 @@
+// Таблица поиска строк в файле
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -34,15 +36,16 @@ int main(int argc, char *argv[])
     while (read(fd, &c, 1) == 1) {
         pos++;
         if (c == '\n') {
+            if (line_len > 0){ // валидация на length > 0
             /* конец строки — записываем в таблицу */
-            if (num_lines == capacity) {
-                capacity = capacity ? capacity * 2 : 16;
-                table = realloc(table, capacity * sizeof(LineInfo));
+                if (num_lines == capacity) {
+                    capacity = capacity ? capacity * 2 : 16;
+                    table = realloc(table, capacity * sizeof(LineInfo));
+                }
+                table[num_lines].offset = line_start;
+                table[num_lines].length = line_len;
+                num_lines++;
             }
-            table[num_lines].offset = line_start;
-            table[num_lines].length = line_len;
-            num_lines++;
-
             line_start = pos;   /* следующая строка начинается после '\n' */
             line_len = 0;
         } else {
