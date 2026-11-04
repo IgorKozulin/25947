@@ -1,3 +1,6 @@
+// Список строк
+// Что делает: читает строки с клавиатуры и складывает в связный список.
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,9 +14,6 @@ int main(void)
 {
     char buffer[1024];
     struct Node *head = NULL, *tail = NULL, *cur, *tmp;
-
-    printf("Введите строки (точка в начале строки — конец ввода):\n");
-
     while (1) {
         if (fgets(buffer, sizeof(buffer), stdin) == NULL)
             break;
@@ -37,10 +37,9 @@ int main(void)
             tail = node;
         }
     }
-
-    printf("\n--- Содержимое списка ---\n");
-    for (cur = head; cur != NULL; cur = cur->next)
-        printf("%s\n", cur->data);
+    // for (cur = head; cur != NULL; cur = cur->next)
+    //     //printf("%s\n", cur->data);
+    printf("%s\n%s\n", head->data, tail->data);
 
     cur = head;
     while (cur != NULL) {
