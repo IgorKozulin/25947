@@ -2,8 +2,9 @@
 #include <time.h>
 #include <stdlib.h>
 
-int main(){
-    setenv("TZ", "America/Los_Angeles",1);
+int main(void)
+{
+    setenv("TZ", "America/Cambridge_Bay",1);
     tzset();
     time_t current_time;
     struct tm *sp;

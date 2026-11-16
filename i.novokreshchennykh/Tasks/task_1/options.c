@@ -5,6 +5,7 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
+#include <time.h>
 
 extern char **environ;
 
@@ -17,7 +18,7 @@ int main(int argc, char *argv[])
 {
     struct rlimit limit;
 
-    char *options = "inspuU:cC:dvV:";
+    char *options = "tinspuU:cC:dvV:";
     int chr;
 
     struct option_item *items = NULL;
@@ -63,6 +64,25 @@ int main(int argc, char *argv[])
 
         switch (item.option)
         {
+            case 't':
+                    setenv("TZ", "Asia/Novosibirsk",1);
+                    tzset();
+                    time_t current_time;
+                    struct tm *sp;
+
+                    time(&current_time);
+                    sp = localtime(&current_time);
+
+                    printf("%02d/%02d/%04d %02d:%02d %s\n", 
+                            sp -> tm_mday,
+                            sp -> tm_mon + 1,
+                            sp -> tm_year + 1900,
+                            sp -> tm_hour,
+                            sp -> tm_min,
+                            tzname[sp -> tm_isdst]);
+                    
+                    break;
+
             case 'i':
                 printf("uid %d; euid %d; gid %d; egid %d\n",
                        getuid(), geteuid(), getgid(), getegid());
