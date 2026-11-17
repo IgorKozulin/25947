@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -O2 -Wall -Wextra
-TARGET = execvpe_test
-SRC = execvpe_test.c
+TARGET = beeper
+SRC = beeper.c
 
 all: $(TARGET)
 

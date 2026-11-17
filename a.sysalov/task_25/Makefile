@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -O2 -Wall -Wextra
-TARGET = path_pattern
-SRC = path_pattern.c
+TARGET = pipe_upper
+SRC = pipe_upper.c
 
 all: $(TARGET)
 
