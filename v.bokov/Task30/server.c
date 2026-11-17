@@ -2,24 +2,27 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <ctype.h>
 #include <errno.h>
+#include <signal.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 
 #define SOCKET_PATH "./socket"
+#define TIMEOUT 10000
 
 int main(void)
 {
-    int server_fd, client_fd;
+    int sock_fd;
     struct sockaddr_un addr;
-    char buffer[256];
-    ssize_t n;
-    int result = 0;
+    struct pollfd pfd;
+    char text[256];
 
-    server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    signal(SIGPIPE, SIG_IGN);
 
-    if (server_fd == -1)
+    sock_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+
+    if (sock_fd == -1)
     {
         perror("socket");
         return 1;
@@ -29,93 +32,74 @@ int main(void)
     addr.sun_family = AF_UNIX;
     strcpy(addr.sun_path, SOCKET_PATH);
 
-    unlink(SOCKET_PATH);
-
-    if (bind(server_fd, (struct sockaddr *)&addr,
-             sizeof(addr)) == -1)
+    if (connect(sock_fd, (struct sockaddr *)&addr,
+                sizeof(addr)) == -1)
     {
-        perror("bind");
-        close(server_fd);
+        perror("connect");
+        close(sock_fd);
         return 1;
     }
 
-    if (listen(server_fd, 5) == -1)
-    {
-        perror("listen");
-        close(server_fd);
-        unlink(SOCKET_PATH);
-        return 1;
-    }
+    printf("Connected to server!\n");
+    printf("You have 10 seconds to enter each line.\n");
 
-    printf("Server started. Waiting for client...\n");
-    fflush(stdout);
-
-    client_fd = accept(server_fd, NULL, NULL);
-
-    if (client_fd == -1)
-    {
-        perror("accept");
-        close(server_fd);
-        unlink(SOCKET_PATH);
-        return 1;
-    }
-
-    printf("Client connected!\n");
-    fflush(stdout);
+    pfd.fd = STDIN_FILENO;
+    pfd.events = POLLIN;
 
     while (1)
     {
-        n = read(client_fd, buffer, sizeof(buffer));
+        printf("> ");
+        fflush(stdout);
 
-        if (n == 0)
+        int result = poll(&pfd, 1, TIMEOUT);
+
+        if (result == 0)
+        {
+            printf("\n10 seconds passed! Disconnecting...\n");
             break;
+        }
 
-        if (n == -1)
+        if (result < 0)
         {
             if (errno == EINTR)
                 continue;
 
-            perror("read");
-            result = 1;
+            perror("poll");
             break;
         }
 
-        for (ssize_t i = 0; i < n; i++)
-        {
-            buffer[i] = toupper(
-                (unsigned char)buffer[i]);
-        }
+        if (fgets(text, sizeof(text), stdin) == NULL)
+            break;
 
+        if (strcmp(text, "\n") == 0)
+            break;
+
+        size_t len = strlen(text);
         size_t sent = 0;
 
-        while (sent < (size_t)n)
+        while (sent < len)
         {
-            ssize_t k = write(STDOUT_FILENO,
-                              buffer + sent,
-                              (size_t)n - sent);
+            ssize_t n = write(sock_fd,
+                              text + sent,
+                              len - sent);
 
-            if (k == -1 && errno == EINTR)
+            if (n == -1 && errno == EINTR)
                 continue;
 
-            if (k <= 0)
+            if (n <= 0)
             {
                 perror("write");
-                result = 1;
-                break;
+                close(sock_fd);
+                return 1;
             }
 
-            sent += (size_t)k;
+            sent += (size_t)n;
         }
-
-        if (result != 0)
-            break;
     }
 
-    printf("\nClient disconnected. Server finished.\n");
+    close(sock_fd);
 
-    close(client_fd);
-    close(server_fd);
-    unlink(SOCKET_PATH);
+    printf("Client disconnected.\n");
 
-    return result;
+    return 0;
 }
