@@ -70,17 +70,18 @@ int main(void)
         }
 
         tail = new_node;
-    
-
-    printf("\nSaved strings:\n"); 
-
-    
-    for (struct Node *current = head; current != NULL; current = current->next) {
-        printf("%s\n", current->text);
     }
 
-    free_list(head); 
+    printf("\nFirst and last strings:\n");
+
+    if (head != NULL) {
+        printf("%s\n", head->text);
+        if (tail != head) {
+            printf("%s\n", tail->text);
+        }
+    }
+
+    free_list(head);
 
     return 0;
-}
 }

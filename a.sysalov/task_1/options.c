@@ -1,17 +1,40 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 #include <sys/resource.h>
 
 extern char **environ;
 
 int main(int argc, char **argv)
 {
-    char *options = "isp uU:cC:dvV:";
+    char *options = "ispuU:cC:dtvV:";
     int opt;
+    struct option_entry
+    {
+        int value;
+        char *argument;
+    };
+    struct option_entry *parsed_options = calloc((size_t)argc, sizeof(*parsed_options));
+    int option_count = 0;
+
+    if (parsed_options == NULL)
+    {
+        perror("calloc");
+        return 1;
+    }
 
     while ((opt = getopt(argc, argv, options)) != -1)
     {
+        parsed_options[option_count].value = opt;
+        parsed_options[option_count].argument = optarg;
+        option_count++;
+    }
+
+    for (int i = option_count - 1; i >= 0; i--)
+    {
+        opt = parsed_options[i].value;
+        optarg = parsed_options[i].argument;
         switch (opt)
         {
             case 'i':
@@ -141,6 +164,23 @@ int main(int argc, char **argv)
 
                 break;
             }
+            case 't':
+            {
+                setenv("TZ", "America/Los_Angeles", 1);
+                tzset();
+                time_t now;
+                time(&now);
+                struct tm *sp = localtime(&now);
+                printf("%02d/%02d/%04d %02d:%02d:%02d %s\n",
+                    sp->tm_mday,
+                    sp->tm_mon + 1,
+                    sp->tm_year + 1900,
+                    sp->tm_hour,
+                    sp->tm_min,
+                    sp->tm_sec,
+                    tzname[sp->tm_isdst]);
+                break;
+            }
 
             case '?':
             {
@@ -150,5 +190,6 @@ int main(int argc, char **argv)
         }
     }
 
+    free(parsed_options);
     return 0;
 }

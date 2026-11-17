@@ -86,10 +86,10 @@ int main(int argc, char *argv[])
     printf("Line table:\n");
 
     for (size_t i = 0; i < count; i++) {
-        printf("Line %zu: position = %lld, length = %zu\n",
-               i,                       
+        printf("Line %zu: position = %lld, length = %zu, memory = %zu\n",
+               i,
                (long long)table[i].position,
-               table[i].length);
+               table[i].length, table[i].length +1);
     }
 
     while (1) {
@@ -140,3 +140,4 @@ int main(int argc, char *argv[])
 
     return 0; 
 }
+// сколько занимает память каждая строка
