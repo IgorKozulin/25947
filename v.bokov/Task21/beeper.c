@@ -1,84 +1,53 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
 #include <unistd.h>
 
-volatile sig_atomic_t beep_count = 0;
-
-void sigint_handler(int sig)
+int main(int argc, char *argv[])
 {
-    (void)sig;
+    FILE *file;
+    int ch;
+    int count = 0;
 
-    write(STDOUT_FILENO, "\a", 1);
-    beep_count++;
-}
-
-void sigquit_handler(int sig)
-{
-    (void)sig;
-
-    const char msg[] = "\nTotal beeps: ";
-    write(STDOUT_FILENO, msg, sizeof(msg) - 1);
-
-    char number[20];
-    int i = 0;
-    unsigned int n = (unsigned int)beep_count;
-
-    do
+    if (argc < 2)
     {
-        number[i++] = '0' + n % 10;
-        n /= 10;
-    }
-    while (n > 0);
-
-    while (i > 0)
-    {
-        i--;
-        write(STDOUT_FILENO, &number[i], 1);
-    }
-
-    const char end[] = "\nProgram finished.\n";
-    write(STDOUT_FILENO, end, sizeof(end) - 1);
-
-    _exit(0);
-}
-
-int main(void)
-{
-    struct sigaction sa_int = {0};
-    struct sigaction sa_quit = {0};
-
-    sa_int.sa_handler = sigint_handler;
-    sigemptyset(&sa_int.sa_mask);
-    sigaddset(&sa_int.sa_mask, SIGQUIT);
-    sa_int.sa_flags = 0;
-
-    if (sigaction(SIGINT, &sa_int, NULL) == -1)
-    {
-        perror("sigaction SIGINT");
+        printf("Usage: %s file.txt\n", argv[0]);
         return 1;
     }
 
-    sa_quit.sa_handler = sigquit_handler;
-    sigemptyset(&sa_quit.sa_mask);
-    sigaddset(&sa_quit.sa_mask, SIGINT);
-    sa_quit.sa_flags = 0;
+    file = fopen(argv[1], "r");
 
-    if (sigaction(SIGQUIT, &sa_quit, NULL) == -1)
+    if (file == NULL)
     {
-        perror("sigaction SIGQUIT");
+        perror("fopen");
         return 1;
     }
 
-    printf("Beeper started!\n");
-    printf("Ctrl+C - beep\n");
-    printf("Ctrl+\\ - show count and exit\n");
-    fflush(stdout);
+    printf("Reading file: %s\n", argv[1]);
 
-    while (1)
+    while ((ch = fgetc(file)) != EOF)
     {
-        pause();
+        if (ch == '-')
+        {
+            write(STDOUT_FILENO, "\a", 1);
+            printf("- Beep!\n");
+            fflush(stdout);
+
+            count++;
+            sleep(1);
+        }
+        else if (ch == '.')
+        {
+            printf(". Silence\n");
+            fflush(stdout);
+
+            sleep(1);
+        }
     }
+
+    fclose(file);
+
+    printf("Total beeps: %d\n", count);
+    printf("Program finished.\n");
 
     return 0;
 }

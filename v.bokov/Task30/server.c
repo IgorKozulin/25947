@@ -82,7 +82,8 @@ int main(void)
 
         for (ssize_t i = 0; i < n; i++)
         {
-            buffer[i] = toupper((unsigned char)buffer[i]);
+            buffer[i] = toupper(
+                (unsigned char)buffer[i]);
         }
 
         size_t sent = 0;

@@ -28,18 +28,25 @@ int main(void)
 
     if (pid == 0)
     {
+        /* Дочерний процесс */
         close(pipefd[1]);
 
         char buffer[256];
         ssize_t n;
+        int count = 0;
 
         while ((n = read(pipefd[0], buffer,
                          sizeof(buffer))) > 0)
         {
             for (ssize_t i = 0; i < n; i++)
             {
-                buffer[i] = toupper(
-                    (unsigned char)buffer[i]);
+                unsigned char ch =
+                    (unsigned char)buffer[i];
+
+                if (islower(ch))
+                    count++;
+
+                buffer[i] = toupper(ch);
             }
 
             fwrite(buffer, 1, n, stdout);
@@ -53,11 +60,15 @@ int main(void)
             return 1;
         }
 
+        printf("\nConverted characters: %d\n", count);
+        fflush(stdout);
+
         close(pipefd[0]);
         return 0;
     }
     else
     {
+        /* Родительский процесс */
         close(pipefd[0]);
 
         char text[256];
