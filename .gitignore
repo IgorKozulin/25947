@@ -1,0 +1,9 @@
+*.o
+p.marchenko/task_1/task_1
+p.marchenko/task_2/task_2
+p.marchenko/task_3/task_3
+p.marchenko/task_4/task_4
+p.marchenko/task_5/line_lookup
+p.marchenko/task_6/task_6
+p.marchenko/task_7/line_lookup_mmap
+p.marchenko/task_9/process_manager
