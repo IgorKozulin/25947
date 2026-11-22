@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -O2 -std=gnu99
-TARGET = pipe_upper
+TARGET = pipe_uppe
 SRC = pipe_upper.c
 
 all: $(TARGET)

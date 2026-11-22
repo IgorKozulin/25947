@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -O2 -std=c99
-TARGET = line_editor
+TARGET = line_edito
 SRC = line_editor.c
 
 all: $(TARGET)

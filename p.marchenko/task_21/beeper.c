@@ -3,69 +3,82 @@
 #include <signal.h>
 #include <unistd.h>
 #include <string.h>
-#include <termios.h>
 
-/* Глобальная переменная для безопасного подсчета в обработчике */
 volatile sig_atomic_t beep_count = 0;
 
-/* Обработчик SIGINT (Ctrl+C) */
 void sigint_handler(int sig) {
-    (void)sig; /* Убираем предупреждение о неиспользуемом параметре */
-    /* Безопасный вывод звукового сигнала (ASCII 7) */
+    (void)sig;
     write(STDOUT_FILENO, "\a", 1);
     beep_count++;
 }
 
-/* Обработчик SIGQUIT (Ctrl+\) */
 void sigquit_handler(int sig) {
     (void)sig;
     char buffer[128];
-    /* Формируем сообщение. snprintf безопаснее, чем sprintf */
-    int len = snprintf(buffer, sizeof(buffer), 
-                       "\nВсего прозвучало сигналов: %d\nПрограмма завершена по SIGQUIT\n", 
-                       beep_count);
-    /* Выводим через write, так как printf внутри обработчика использовать нельзя */
+    int len = snprintf(buffer, sizeof(buffer), "\nВсего прозвучало сигналов: %d\nПрограмма завершена по SIGQUIT\n", beep_count);
     write(STDOUT_FILENO, buffer, len);
     _exit(EXIT_SUCCESS);
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
     struct sigaction sa_int, sa_quit;
 
-    /* --- Настройка SIGINT --- */
+    /* Настройка сигналов */
     sa_int.sa_handler = sigint_handler;
     sigemptyset(&sa_int.sa_mask);
-    sa_int.sa_flags = SA_RESTART; /* Перезапускать pause() после сигнала */
-    if (sigaction(SIGINT, &sa_int, NULL) == -1) {
-        perror("sigaction SIGINT");
-        exit(1);
-    }
+    sa_int.sa_flags = SA_RESTART;
+    sigaction(SIGINT, &sa_int, NULL);
 
-    /* --- Настройка SIGQUIT --- */
     sa_quit.sa_handler = sigquit_handler;
     sigemptyset(&sa_quit.sa_mask);
-    sa_quit.sa_flags = 0; /* Флаги не важны, так как мы завершаем процесс */
-    if (sigaction(SIGQUIT, &sa_quit, NULL) == -1) {
-        perror("sigaction SIGQUIT");
-        exit(1);
+    sa_quit.sa_flags = 0;
+    sigaction(SIGQUIT, &sa_quit, NULL);
+
+    /* Если файл не передан, работаем как обычная пищалка */
+    if (argc < 2) {
+        printf("Пищалка запущена!\n");
+        printf("Нажмите Ctrl+C — будет звуковой сигнал\n");
+        printf("Нажмите Ctrl+\\ — программа завершится с подсчетом сигналов\n");
+        printf("Ожидаю сигналов...\n");
+        while(1) pause();
     }
 
-    /* --- Отключение вывода ^C на экран (ECHOCTL) --- */
-    struct termios term;
-    if (tcgetattr(STDIN_FILENO, &term) == 0) {
-        term.c_lflag &= ~ECHOCTL; /* Убираем флаг */
-        tcsetattr(STDIN_FILENO, TCSANOW, &term);
+    /* Если файл передан — читаем и воспроизводим морзянку */
+    FILE *f = fopen(argv[1], "r");
+    if (!f) {
+        perror("fopen");
+        return 1;
     }
 
-    printf("Пищалка запущена!\n");
-    printf("Нажмите Ctrl+C — будет звуковой сигнал\n");
-    printf("Нажмите Ctrl+\\ — программа завершится с подсчетом сигналов\n");
-    printf("Ожидаю сигналов...\n");
-
-    /* Бесконечный цикл. pause() засыпает и просыпается только при получении сигнала */
-    while (1) {
-        pause();
+    printf("Воспроизвожу Морзе из файла: %s\n", argv[1]);
+    int c;
+    while ((c = fgetc(f)) != EOF) {
+        if (c == '-') {
+            /* ТИРЕ: пищим 0.5 секунды */
+            for(int i=0; i<5; i++) {
+                write(STDOUT_FILENO, "\a", 1);
+                usleep(100000); // 0.1 сек
+            }
+            printf("-"); 
+            fflush(stdout);
+            usleep(100000);
+        } 
+        else if (c == '.') {
+            /* ТОЧКА: пищит один раз */
+            write(STDOUT_FILENO, "\a", 1);
+            printf("."); 
+            fflush(stdout);
+            usleep(300000);
+        }
+        else if (c == ' ') {
+            /* ПРОБЕЛ: пауза */
+            usleep(500000);
+            printf(" "); 
+            fflush(stdout);
+        }
     }
-
+    
+    fclose(f);
+    printf("\nВоспроизведение завершено.\n");
     return 0;
 }

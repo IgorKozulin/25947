@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -O2
-TARGET = process_manager
+TARGET = process_manage
 SRC = process_manager.c
 
 all: $(TARGET)
@@ -13,7 +13,7 @@ clean:
 
 .PHONY: all cleanCC = gcc
 CFLAGS = -O2
-TARGET = process_manager
+TARGET = process_manage
 SRC = process_manager.c
 
 all: $(TARGET)

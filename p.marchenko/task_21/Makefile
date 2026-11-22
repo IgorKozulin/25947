@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -O2 -std=gnu99
-TARGET = beeper
+TARGET = beepe
 SRC = beeper.c
 
 all: $(TARGET)
