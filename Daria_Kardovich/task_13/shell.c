@@ -1,7 +1,7 @@
 #include <stdio.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
+#include <sys/types.h> // Добавлено для типа pid_t
+#include <sys/wait.h> // Добавлено для waitpid и макросов статуса
+#include <unistd.h> // Добавлено для fork execvp и _exit
 
 #include "shell.h"
 
@@ -49,37 +49,37 @@ int main(int argc, char *argv[])
         print_parsed_commands(ncmds);
 #endif
 
-        for (int i = 0; i < ncmds; i++) {
-            pid_t pid;
-            int status;
+        for (int i = 0; i < ncmds; i++) { // Добавлено в задании 13 для запуска каждой команды
+            pid_t pid; // Хранит номер дочернего процесса
+            int status; // Хранит статус завершения дочернего процесса
 
-            pid = fork();
+            pid = fork(); // Создаёт дочерний процесс
 
-            if (pid == -1) {
-                perror("fork");
-                continue;
+            if (pid == -1) { // Проверяет ошибку создания процесса
+                perror("fork"); // Печатает причину ошибки fork
+                continue; // Переходит к следующей команде
             }
 
-            if (pid == 0) {
-                execvp(cmds[i].cmdargs[0], cmds[i].cmdargs);
+            if (pid == 0) { // Этот блок выполняется только в дочернем процессе
+                execvp(cmds[i].cmdargs[0], cmds[i].cmdargs); // Запускает введённую команду
 
-                perror(cmds[i].cmdargs[0]);
-                _exit(127);
+                perror(cmds[i].cmdargs[0]); // Печатает ошибку если команда не найдена
+                _exit(127); // Завершает потомка с кодом ошибки 127
             }
 
-            if (waitpid(pid, &status, 0) == -1) {
-                perror("waitpid");
-                continue;
+            if (waitpid(pid, &status, 0) == -1) { // Родительский shell ждёт завершения потомка
+                perror("waitpid"); // Печатает причину ошибки ожидания
+                continue; // Переходит к следующей команде
             }
 
-            if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+            if (WIFEXITED(status) && WEXITSTATUS(status) != 0) { // Проверяет завершение команды с ненулевым кодом
                 fprintf(stderr, "Command exited with status %d\n",
-                        WEXITSTATUS(status));
+                        WEXITSTATUS(status)); // Печатает код завершения команды
             }
 
-            if (WIFSIGNALED(status)) {
+            if (WIFSIGNALED(status)) { // Проверяет завершение команды из-за сигнала
                 fprintf(stderr, "Command terminated by signal %d\n",
-                        WTERMSIG(status));
+                        WTERMSIG(status)); // Печатает номер сигнала
             }
         }
     }
