@@ -9,7 +9,7 @@
 int copy_text(int input, int output, int uppercase)
 {
     unsigned char buffer[1024];
-
+    size_t count = 0;
     while (1) {
         ssize_t length = read(input, buffer, sizeof(buffer));
         if (length == -1) {
@@ -21,7 +21,13 @@ int copy_text(int input, int output, int uppercase)
 
         if (uppercase) {
             for (ssize_t i = 0; i < length; i++) {
+                count++;
+
                 buffer[i] = (unsigned char)toupper(buffer[i]);
+                if (buffer[i] == '\n') {
+                    fprintf(stderr, "count: %zu\n", count);
+                    count = 0;
+                }
             }
         }
         ssize_t total = 0;
@@ -60,7 +66,7 @@ int main(void)
         close(channel[1]);
         return 1;
     }
-    if (child == 0) {
+    if (child == 0) { // посчитать символы
         close(channel[1]);
         int status = copy_text(channel[0], STDOUT_FILENO, 1);
         close(channel[0]);
