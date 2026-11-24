@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
         else snprintf(group, sizeof(group), "%lu", (unsigned long)info.st_gid);
 
         char size[32] = "";
-        if (S_ISREG(info.st_mode)) {
+        if (S_ISREG(info.st_mode) || S_ISDIR(info.st_mode)) {
             snprintf(size, sizeof(size), "%lld", (long long)info.st_size);
         }
         char date[32] = "?";

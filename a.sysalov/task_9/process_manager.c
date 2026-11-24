@@ -16,8 +16,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     if (child == 0) {
-        execlp("cat", "cat", "--", argv[1], (char *)NULL);
-        perror("exec cat");
+        printf("PID: %d\n", getpid());
         _exit(127);
     }
     printf("Parent process started.\n");
@@ -28,6 +27,7 @@ int main(int argc, char *argv[])
             return 1;
         }
     }
+    printf("PID: %d\n", getpid());
     printf("Child process finished.\n");
     return WIFEXITED(status) ? WEXITSTATUS(status) : 1;
 }

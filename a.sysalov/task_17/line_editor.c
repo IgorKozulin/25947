@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -52,36 +53,71 @@ int prepare_terminal(void)
 #define WIDTH 40
 
 static size_t screen_row = 0;
+static size_t screen_column = 0;
+size_t cursor = 0;
 
-void redraw(const char *line, size_t length)
+void next_position(const char *line, size_t length, size_t index,
+                   size_t *row, size_t *column)
+{
+    if (index == length) return;
+    if (line[index] != ' ' && (index == 0 || line[index - 1] == ' ')) {
+        size_t end = index;
+        while (end < length && line[end] != ' ') end++;
+        if (*column > 0 && *column + end - index > WIDTH) {
+            (*row)++;
+            *column = 0;
+        }
+    }
+    if (*column == WIDTH) {
+        (*row)++;
+        *column = 0;
+    }
+}
+
+size_t move_vertical(const char *line, size_t length, size_t cursor, int down)
+{
+    if (!down && screen_row == 0) return cursor;
+    size_t target_row = down ? screen_row + 1 : screen_row - 1;
+    size_t row = 0;
+    size_t column = 0;
+    size_t result = cursor;
+
+    for (size_t i = 0; i <= length; i++) {
+        next_position(line, length, i, &row, &column);
+        if (row > target_row) break;
+        if (row == target_row && column <= screen_column) result = i;
+        column++;
+    }
+    return result;
+}
+
+void redraw(const char *line, size_t length, size_t cursor)
 {
     printf("\r");
     if (screen_row > 0) printf("\033[%zuA", screen_row);
     printf("\033[J");
     size_t column = 0;
-    screen_row = 0;
-    for (size_t i = 0; i < length;) {
-        size_t end = i;
-        if (line[i] == ' ') {
-            end++;
-        } else {
-            while (end < length && line[end] != ' ') end++;
-            if (column > 0 && column + end - i > WIDTH) {
-                printf("\n");
-                screen_row++;
-                column = 0;
-            }
+    size_t row = 0;
+    size_t cursor_row = 0;
+    size_t cursor_column = 0;
+    for (size_t i = 0; i <= length; i++) {
+        size_t previous_row = row;
+        next_position(line, length, i, &row, &column);
+        if (row > previous_row) putchar('\n');
+        if (i == cursor) {
+            cursor_row = row;
+            cursor_column = column;
         }
-        while (i < end) {
-            if (column == WIDTH) {
-                printf("\n");
-                screen_row++;
-                column = 0;
-            }
-            putchar(line[i++]);
+        if (i < length) {
+            putchar(line[i]);
             column++;
         }
     }
+    printf("\r");
+    if (row > cursor_row) printf("\033[%zuA", row - cursor_row);
+    if (cursor_column > 0) printf("\033[%zuC", cursor_column);
+    screen_row = cursor_row;
+    screen_column = cursor_column;
     fflush(stdout);
 }
 
@@ -91,6 +127,9 @@ int main(void)
     char *line = NULL;
     size_t length = 0;
     size_t capacity = 0;
+    size_t cursor = 0;
+    int replace_mode = 0;
+    int escape = 0;
     unsigned char symbol;
     int status = 0;
     while (!interrupted) {
@@ -103,22 +142,63 @@ int main(void)
             }
             break;
         }
+        if (symbol == 16) {
+            replace_mode = !replace_mode;
+            escape = 0;
+            if (!replace_mode) cursor = length;
+            redraw(line, length, cursor);
+            continue;
+        }
+        if (symbol == 27) {
+            escape = 1;
+            continue;
+        }
+        if (escape == 1) {
+            escape = symbol == '[' || symbol == 'O' ? 2 : 0;
+            if (escape) continue;
+        } else if (escape == 2) {
+            escape = 0;
+            if (replace_mode && symbol == 'D' && cursor > 0) {
+                cursor--;
+            } else if (replace_mode && symbol == 'C' && cursor < length) {
+                cursor++;
+            } else if (replace_mode && (symbol == 'A' || symbol == 'B')) {
+                cursor = move_vertical(line, length, cursor, symbol == 'B');
+            } else {
+                putchar('\a');
+            }
+            redraw(line, length, cursor);
+            continue;
+        }
         if (symbol == 4 && length == 0) break;
         if (symbol == original.c_cc[VERASE]) {
-            if (length > 0) length--;
+            if (cursor > 0) {
+                memmove(line + cursor - 1, line + cursor, length - cursor);
+                cursor--;
+                length--;
+            }
         } else if (symbol == original.c_cc[VKILL]) {
             length = 0;
+            cursor = 0;
         } else if (symbol == 23) {
-            while (length > 0 && line[length - 1] == ' ') length--;
-            while (length > 0 && line[length - 1] != ' ') length--;
+            size_t start = cursor;
+            while (start > 0 && line[start - 1] == ' ') start--;
+            while (start > 0 && line[start - 1] != ' ') start--;
+            if (start < cursor) {
+                memmove(line + start, line + cursor, length - cursor);
+                length -= cursor - start;
+                cursor = start;
+            }
         } else if (symbol == '\n' || symbol == '\r') {
+            redraw(line, length, length);
             putchar('\n');
             fflush(stdout);
             length = 0;
+            cursor = 0;
             screen_row = 0;
             continue;
         } else if (isprint(symbol)) {
-            if (length == capacity) {
+            if (cursor == length && length == capacity) {
                 size_t new_capacity = capacity ? capacity * 2 : 128;
                 char *new_line = realloc(line, new_capacity);
                 if (new_line == NULL) {
@@ -129,15 +209,18 @@ int main(void)
                 line = new_line;
                 capacity = new_capacity;
             }
-            line[length++] = (char)symbol;
+            line[cursor] = (char)symbol;
+            if (cursor == length) length++;
+            cursor++;
         } else {
             putchar('\a');
             fflush(stdout);
             continue;
         }
-        redraw(line, length);
+        redraw(line, length, cursor);
     }
     free(line);
     putchar('\n');
     return interrupted ? 128 + interrupted : status;
 }
+// insert
