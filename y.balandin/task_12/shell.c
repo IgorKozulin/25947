@@ -48,7 +48,6 @@ int main(int argc, char *argv[])
         }
 #endif
 
-        /* Место для fork/exec — в задаче 13 */
         for (i = 0; i < ncmds; i++) {
             /* FORK AND EXECUTE */
         }
